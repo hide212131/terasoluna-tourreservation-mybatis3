@@ -102,10 +102,144 @@
     </dependency>
     <!-- == End Coding Support == -->
 
+    <!-- == Begin DBUnit+Spock Support == -->
+    <dependency>
+      <groupId>com.github.springtestdbunit</groupId>
+      <artifactId>spring-test-dbunit</artifactId>
+      <version>1.3.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.dbunit</groupId>
+      <artifactId>dbunit</artifactId>
+      <version>2.5.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.spockframework</groupId>
+      <artifactId>spock-core</artifactId>
+      <version>1.2-groovy-2.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.spockframework</groupId>
+      <artifactId>spock-spring</artifactId>
+      <version>1.2-groovy-2.4</version>
+    </dependency>
+    <!-- == End DBUnit+Spock Support == -->
   </dependencies>
 
   <properties>
     <project.root.basedir>${project.parent.basedir}</project.root.basedir>
+    <surefire.version>2.19.1</surefire.version>
   </properties>
 
+  <build>
+    <plugins>
+      <plugin>
+        <!-- see: https://github.com/groovy/groovy-eclipse/wiki/Groovy-Eclipse-Maven-plugin -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <compilerId>groovy-eclipse-compiler</compilerId>
+          <source>${java-version}</source>
+          <target>${java-version}</target>
+          <!-- https://stackoverflow.com/questions/8524891/maven-groovy-and-java-lombok -->
+          <fork>true</fork>
+          <compilerArguments>
+            <javaAgentClass>lombok.launch.Agent</javaAgentClass>
+          </compilerArguments>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-eclipse-compiler</artifactId>
+            <version>2.9.2-01</version>
+          </dependency>
+          <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-eclipse-batch</artifactId>
+            <version>2.4.3-01</version>
+          </dependency>
+          <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+
+      <plugin>
+        <!--
+        [ How to execute JUnit(=Spock) and TestNG test cases at same time ? ]
+        see: http://solidsoft.wordpress.com/2013/03/12/mixing-testng-and-junit-tests-in-one-maven-module-2013-edition/
+        -->
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${surefire.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.surefire</groupId>
+            <artifactId>surefire-junit47</artifactId>
+            <version>${surefire.version}</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <!-- resolve "Cannot use a threadCount parameter less than 1; 1 > 0" error. -->
+          <threadCount>1</threadCount>
+          <includes>
+            <!-- for JUnit, explicitly add xxxSpec and xxxTest file patterns. -->
+            <!-- (mysteriously, ".groovy" dosn't work for Spock's xxxxSpec.groovy, but ".java" work!!) -->
+            <include>**/*Spec.java</include>
+            <include>**/*Test.java</include>
+          </includes>
+        </configuration>
+      </plugin>
+      <!--
+        Alternative solution for copying test resources from src/test/java
+        https://stackoverflow.com/questions/4221285/maven-surefire-copy-test-resources-from-src-test-java -->
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-resources</id>
+            <phase>validate</phase>
+            <!--
+            <phase>process-test-resources</phase>
+             -->
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.basedir}/target/test-classes</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/src/test/java</directory>
+                    <includes>
+                      <include>**/*.xlsx</include>
+                    </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+
+    <!-- https://stackoverflow.com/questions/4221285/maven-surefire-copy-test-resources-from-src-test-java -->
+    <!-- It does not work properly.
+         "mvn test" command works, but JUnit due to Eclipse right click does not work.
+    <testResources>
+      <testResource>
+        <directory>${project.basedir}/src/test/java</directory>
+        <includes>
+          <include>**/*.xlsx</include>
+        </includes>
+      </testResource>
+      <testResource>
+        <directory>${project.basedir}/src/test/resources</directory>
+      </testResource>
+    </testResources>
+     -->
+  </build>
 </project>
